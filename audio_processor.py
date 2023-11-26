@@ -25,7 +25,7 @@ class AudioProcessor:
         self.RATE = 44100
         self.CHUNK = int(self.RATE * 10)  # 10-second chunks
         self.WAVE_OUTPUT_FILENAME = "output.wav"
-        self.MAX_NUM_FRAMES = 10
+        self.MAX_NUM_FRAMES = 2
         self.CUR_FRAME = 0
 
         self.frames = []
@@ -42,7 +42,8 @@ class AudioProcessor:
 
         # Set up Matplotlib interactive mode
         plt.ion()
-        self.fig, self.ax = plt.subplots()
+        
+
 
         # Open stream
         self.stream = self.p.open(
@@ -115,7 +116,7 @@ class AudioProcessor:
             audios=audio_data, return_tensors="pt", sampling_rate=16000
         )
         output_tokens = self.model.generate(
-            **audio_inputs, tgt_lang="ita", generate_speech=False
+            **audio_inputs, tgt_lang="eng", generate_speech=False
         )
         translated_text = self.processor.decode(
             output_tokens[0].tolist()[0],
@@ -123,6 +124,7 @@ class AudioProcessor:
             generate_speech=False,
         )
         print(translated_text)
+
 
     def plot_spectrogram(self, audio_data: np.ndarray) -> None:
         """
@@ -177,5 +179,6 @@ class AudioProcessor:
 
 
 # Create and run the audio processor
-audio_processor = AudioProcessor()
-audio_processor.run()
+if __name__ == "__main__":
+    audio_processor = AudioProcessor()
+    audio_processor.run()
