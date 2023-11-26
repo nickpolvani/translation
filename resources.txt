@@ -1,0 +1,9 @@
+# Models
+https://github.com/facebookresearch/fairseq/tree/main/examples/mms
+
+https://huggingface.co/docs/transformers/main/en/model_doc/mms
+
+https://huggingface.co/facebook/mms-1b-fl102
+
+https://huggingface.co/docs/transformers/main/en/model_doc/seamless_m4t
+https://huggingface.co/docs/transformers/main/en/model_doc/seamless_m4t#transformers.SeamlessM4TForSpeechToText
