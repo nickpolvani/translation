@@ -3,18 +3,22 @@ import numpy as np
 import pyaudio
 import queue
 import librosa
-from scipy.signal import spectrogram
 from transformers import AutoProcessor, SeamlessM4TModel
 import wave
+from app.lang import Language
+import time
+from PyQt5.QtCore import QThread, pyqtSignal
 
-
-class AudioProcessor:
+class AudioProcessor(QThread):
     """
     A class to process audio data in real-time, perform speech-to-text translation,
     and visualize the audio data as a spectrogram using Matplotlib.
     """
 
-    def __init__(self):
+    translations_available = pyqtSignal(tuple)
+
+    def __init__(self, language1: Language, language2: Language, parent=None):
+        super(AudioProcessor, self).__init__(parent)
         """
         Initializes the AudioProcessor class with necessary configurations,
         model, processor, and PyAudio stream.
@@ -24,12 +28,14 @@ class AudioProcessor:
         self.CHANNELS = 1
         self.RATE = 44100
         self.CHUNK = int(self.RATE * 10)  # 10-second chunks
-        self.WAVE_OUTPUT_FILENAME = "output.wav"
-        self.MAX_NUM_FRAMES = 2
+
+        self.MAX_NUM_FRAMES = 10
         self.CUR_FRAME = 0
 
         self.frames = []
         self.audio_queue = queue.Queue()
+        self.language1 = language1
+        self.language2 = language2
 
         # Initialize model and processor
         self.processor = AutoProcessor.from_pretrained(
@@ -38,14 +44,15 @@ class AudioProcessor:
         self.model = SeamlessM4TModel.from_pretrained("facebook/hf-seamless-m4t-medium")
 
         # Initialize PyAudio
+        self.p = None
+
+        self.stream = None
+
+
+    def start_recording(self):
+        # Open stream
         self.p = pyaudio.PyAudio()
 
-        # Set up Matplotlib interactive mode
-        plt.ion()
-        
-
-
-        # Open stream
         self.stream = self.p.open(
             format=self.FORMAT,
             channels=self.CHANNELS,
@@ -80,16 +87,32 @@ class AudioProcessor:
             audio_data = self.audio_queue.get()
             self.frames.append(audio_data)
 
+            # measure the time to process audio data
+            start = time.time()
+
             # Audio processing
             audio_data = self.__resample_audio(audio_data)
-
+            print(f"range of audio data: {np.min(audio_data)} to {np.max(audio_data)}")
             # Speech-to-text translation
-            self.translate_speech(audio_data)
+            translation1 = self.translate_speech(
+                audio_data, target_language=self.language1.value
+            )
+            translation2 = self.translate_speech(
+                audio_data, target_language=self.language2.value
+            )
+            print(f"Translation in {self.language1}: {translation1}")
+            print(f"Translation in {self.language2}: {translation2}")
+
+            end = time.time()
+            print(f"Processing time: {end - start} seconds")
 
             # Update spectrogram plot
-            self.plot_spectrogram(audio_data)
+            # self.plot_spectrogram(audio_data)
 
             self.CUR_FRAME += 1
+            return translation1, translation2
+        else:
+            return None
 
     def __resample_audio(self, audio_data: np.ndarray) -> np.ndarray:
         """
@@ -105,7 +128,7 @@ class AudioProcessor:
         audio_data = audio_data / 32768.0  # Convert to float [-1, 1]
         return librosa.resample(y=audio_data, orig_sr=self.RATE, target_sr=new_rate)
 
-    def translate_speech(self, audio_data: np.ndarray) -> None:
+    def translate_speech(self, audio_data: np.ndarray, target_language: str) -> str:
         """
         Translates speech in the audio data to text using a pre-trained model.
 
@@ -116,69 +139,46 @@ class AudioProcessor:
             audios=audio_data, return_tensors="pt", sampling_rate=16000
         )
         output_tokens = self.model.generate(
-            **audio_inputs, tgt_lang="eng", generate_speech=False
+            **audio_inputs, tgt_lang=target_language, generate_speech=False
         )
         translated_text = self.processor.decode(
             output_tokens[0].tolist()[0],
             skip_special_tokens=True,
             generate_speech=False,
         )
-        print(translated_text)
-
-
-    def plot_spectrogram(self, audio_data: np.ndarray) -> None:
-        """
-        Plots the spectrogram of the given audio data.
-
-        Args:
-            audio_data (np.ndarray): The audio data for plotting.
-        """
-        f, t, Sxx = spectrogram(audio_data, 16000, nperseg=1024)
-        self.ax.clear()
-        self.ax.pcolormesh(t, f, 10 * np.log10(Sxx), shading="gouraud")
-        self.ax.set_ylabel("Frequency [Hz]")
-        self.ax.set_xlabel("Time [sec]")
-        plt.draw()
+        return translated_text
 
     def run(self):
         """
         Starts the audio processing and plotting routine. Continues until the specified
         number of frames are processed or a KeyboardInterrupt is received.
         """
+        self.start_recording()
         try:
             while self.stream.is_active():
-                self.consume_audio_queue()
+                translations = self.consume_audio_queue()
+                if translations is not None:
+                    self.translations_available.emit(translations)
                 if self.CUR_FRAME >= self.MAX_NUM_FRAMES:
                     break
-                plt.pause(0.1)
         except KeyboardInterrupt:
             print("\nStopping...")
         finally:
-            self.cleanup()
+            self.stop_recording()
 
-    def cleanup(self):
+    def stop_recording(self):
         """
-        Cleans up the resources by saving the recorded audio, closing the plot,
-        and terminating the PyAudio stream.
+        Stops the PyAudio stream.
         """
-        # Save recorded data
-        wf = wave.open(self.WAVE_OUTPUT_FILENAME, "wb")
-        wf.setnchannels(self.CHANNELS)
-        wf.setsampwidth(self.p.get_sample_size(self.FORMAT))
-        wf.setframerate(self.RATE)
-        wf.writeframes(b"".join(self.frames))
-        wf.close()
-
-        # Close Matplotlib plot
-        plt.close(self.fig)
-
-        # Close PyAudio stream
         self.stream.stop_stream()
         self.stream.close()
         self.p.terminate()
 
 
-# Create and run the audio processor
+
 if __name__ == "__main__":
-    audio_processor = AudioProcessor()
+    # Create and run the audio processor
+    audio_processor = AudioProcessor(
+        language1=Language.ENGLISH, language2=Language.ITALIAN
+    )
     audio_processor.run()

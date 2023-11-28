@@ -7,3 +7,6 @@ https://huggingface.co/facebook/mms-1b-fl102
 
 https://huggingface.co/docs/transformers/main/en/model_doc/seamless_m4t
 https://huggingface.co/docs/transformers/main/en/model_doc/seamless_m4t#transformers.SeamlessM4TForSpeechToText
+
+Real-Time translation GRADIO app
+https://colab.research.google.com/drive/1D38wbK6v65V2BndsvhEms882BgzK1aMQ?usp=sharing#scrollTo=_Hbc0Dzh2nhR
