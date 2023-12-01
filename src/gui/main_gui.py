@@ -9,6 +9,8 @@ import sys
 import time
 from gui.language_select import LanguageSelectWidget
 from gui.recording_window import RecordingWidget
+from gui.loading_window import LoadingDialog
+from app.lang import Language, get_language_from_name
 
 
 class MainWindow(QMainWindow):
@@ -40,14 +42,25 @@ class MainWidget(QWidget):
         self.setWindowTitle("PyQt5 Layout")
         self.show()
 
-    def on_language_select(self, language1, language2):
+    def on_language_select(self, language1: str, language2: str):
         self.language_window.hide()
 
         self.recording_window = RecordingWidget(
-            parent=self, language1=language1, language2=language2
+            parent=self,
+            language1=get_language_from_name(language1),
+            language2=get_language_from_name(language2),
         )
-        self.layout().addWidget(self.recording_window)
+        self.loading_window = LoadingDialog(parent=self)
+        self.layout().addWidget(self.loading_window)
+        self.recording_window.audio_processor.initializations_finished.connect(
+            self.onRecordingReady
+        )
 
+    def onRecordingReady(self):
+        self.loading_window.stop_loading()
+        self.layout().removeWidget(self.loading_window)
+        self.layout().addWidget(self.recording_window)
+        self.recording_window.show()
 
     # def recording_finished(self):
     #     print("Finished all recordings")

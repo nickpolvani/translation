@@ -61,5 +61,5 @@ class LanguageListWidget(QListWidget):
 
     def UI(self):
         for language in self.available_languages:
-            self.addItem(language)
+            self.addItem(str(language))
         self.show()

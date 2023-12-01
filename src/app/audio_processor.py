@@ -3,11 +3,13 @@ import numpy as np
 import pyaudio
 import queue
 import librosa
-from transformers import AutoProcessor, SeamlessM4TModel
+from transformers import AutoProcessor, SeamlessM4TModel, SeamlessM4TForSpeechToText, TextStreamer
 import wave
 from app.lang import Language
 import time
 from PyQt5.QtCore import QThread, pyqtSignal
+import torch.quantization
+
 
 class AudioProcessor(QThread):
     """
@@ -16,6 +18,7 @@ class AudioProcessor(QThread):
     """
 
     translations_available = pyqtSignal(tuple)
+    initializations_finished = pyqtSignal()
 
     def __init__(self, language1: Language, language2: Language, parent=None):
         super(AudioProcessor, self).__init__(parent)
@@ -27,9 +30,10 @@ class AudioProcessor(QThread):
         self.FORMAT = pyaudio.paInt16
         self.CHANNELS = 1
         self.RATE = 44100
-        self.CHUNK = int(self.RATE * 10)  # 10-second chunks
+        self.length_chunk = 3.5  # seconds
+        self.CHUNK = int(self.RATE * self.length_chunk)  
 
-        self.MAX_NUM_FRAMES = 10
+        self.MAX_NUM_FRAMES = 100
         self.CUR_FRAME = 0
 
         self.frames = []
@@ -37,17 +41,25 @@ class AudioProcessor(QThread):
         self.language1 = language1
         self.language2 = language2
 
-        # Initialize model and processor
-        self.processor = AutoProcessor.from_pretrained(
-            "facebook/hf-seamless-m4t-medium"
-        )
-        self.model = SeamlessM4TModel.from_pretrained("facebook/hf-seamless-m4t-medium")
+        self.processor = None
+        self.model = None
 
         # Initialize PyAudio
         self.p = None
 
         self.stream = None
 
+    def initialize_model(self):
+        # Initialize model and processor
+        self.processor = AutoProcessor.from_pretrained(
+            "facebook/hf-seamless-m4t-medium"
+        )
+        model = SeamlessM4TModel.from_pretrained("facebook/hf-seamless-m4t-medium")
+        # quantized_model = torch.quantiezation.quantize_dynamic(
+        #     model, {torch.nn.Linear}, dtype=torch.qint8
+        # )
+        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        self.model = model.to(device)
 
     def start_recording(self):
         # Open stream
@@ -144,7 +156,7 @@ class AudioProcessor(QThread):
         translated_text = self.processor.decode(
             output_tokens[0].tolist()[0],
             skip_special_tokens=True,
-            generate_speech=False,
+           generate_speech=False,
         )
         return translated_text
 
@@ -153,7 +165,10 @@ class AudioProcessor(QThread):
         Starts the audio processing and plotting routine. Continues until the specified
         number of frames are processed or a KeyboardInterrupt is received.
         """
+        self.initialize_model()
         self.start_recording()
+        self.initializations_finished.emit()
+        print("Start to record...")
         try:
             while self.stream.is_active():
                 translations = self.consume_audio_queue()
@@ -173,7 +188,6 @@ class AudioProcessor(QThread):
         self.stream.stop_stream()
         self.stream.close()
         self.p.terminate()
-
 
 
 if __name__ == "__main__":
