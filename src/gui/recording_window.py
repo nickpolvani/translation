@@ -2,7 +2,7 @@ import sys
 import time
 from PyQt5.QtWidgets import *
 from app.lang import Language
-from app.audio_processor import AudioProcessor
+from app.mic_listener import MicrophoneListenerThread
 from gui.scrollable_text import ScrollableTextPanel
 
 
@@ -25,7 +25,7 @@ class RecordingWidget(QWidget):
             f"Transcription in {str(self.language2)}", parent=self
         )
 
-        self.audio_processor = AudioProcessor(
+        self.audio_processor = MicrophoneListenerThread(
             language1=self.language1, language2=self.language2, parent=self
         )
         self.audio_processor.translations_available.connect(self.update_texts_panel)
