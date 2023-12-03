@@ -1,5 +1,4 @@
 import numpy as np
-from app.vad_plotter import VadPlotter
 
 class Vad:
 
@@ -11,11 +10,6 @@ class Vad:
         self.current_silence_seconds = 0
         self.current_speech_seconds = 0
         self.cur_time = 0
-
-        if plot_vad:
-            self.vad_plotter = VadPlotter()
-        else:
-            self.vad_plotter = None
 
     def is_speech(self, audio_data:np.ndarray) -> bool:
         """
@@ -31,8 +25,6 @@ class Vad:
             self.current_speech_seconds += self.frame_duration_ms / 1000
             self.current_silence_seconds = 0
             result = True
-        if self.vad_plotter:
-            self.vad_plotter.update_plot(self.cur_time, result)
         return result
         
     def __is_silence(self, audio_data:np.ndarray) -> bool:

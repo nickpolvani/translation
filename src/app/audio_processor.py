@@ -2,9 +2,12 @@ import queue
 from app.vad import Vad
 from PyQt5.QtCore import QThread
 import numpy as np
-
+from PyQt5.QtCore import pyqtSignal
 
 class AudioProcessorThread(QThread):
+
+    vad_available = pyqtSignal(float, int)
+
     def __init__(
         self,
         audio_queue: queue.Queue,
@@ -12,8 +15,9 @@ class AudioProcessorThread(QThread):
         length_chunk_seconds: float,
         max_chunk_length_seconds: float = 15.0,
         sec_silence_before_processing: float = 3.0,
+        parent=None,
     ):
-        super(AudioProcessorThread, self).__init__()
+        super(AudioProcessorThread, self).__init__(parent)
 
         self.audio_queue = audio_queue
         self.input_rate = input_rate
@@ -47,7 +51,7 @@ class AudioProcessorThread(QThread):
         # print(f"range of audio data: {np.min(audio_data)} to {np.max(audio_data)}")
 
         is_speech = self.vad.is_speech(audio_data)
-        print("Voice detected: ", is_speech)
+        self.vad_available.emit(self.vad.cur_time, int(is_speech))
 
         #  discard audio data if it is not speech and we have not accumulated enough audio data
         if not is_speech:

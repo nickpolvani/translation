@@ -17,6 +17,8 @@ from PyQt5.QtCore import pyqtSignal
 
 class TranslatorThread(QThread):
     translations_available = pyqtSignal(tuple)
+    processing_finished = pyqtSignal()
+    processing_started = pyqtSignal()
 
     def __init__(
         self,
@@ -47,6 +49,7 @@ class TranslatorThread(QThread):
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.model = model.to(device)
         self.initialized = True
+        print("Translator initialized.")
 
     def _get_translations(self, audio_data: np.ndarray) -> Tuple[str, str]:
         # Audio processing
@@ -105,7 +108,9 @@ class TranslatorThread(QThread):
             raise ValueError("Translator has not been initialized.")
         while True:
             current_sentence = self.sentence_queue.get()
+            self.processing_started.emit()
             translation1, translation2 = self._get_translations(
                 audio_data=current_sentence
             )
             self.translations_available.emit((translation1, translation2))
+            self.processing_finished.emit()

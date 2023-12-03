@@ -52,7 +52,7 @@ class MainWidget(QWidget):
         )
         self.loading_window = LoadingDialog(parent=self)
         self.layout().addWidget(self.loading_window)
-        self.recording_window.audio_processor.initializations_finished.connect(
+        self.recording_window.controller.initializations_finished.connect(
             self.onRecordingReady
         )
 
@@ -71,7 +71,7 @@ class MainWidget(QWidget):
 
 def main():
     a = QApplication(sys.argv)
-    font = QFont("Arial", 26)
+    font = QFont("Arial", 21)
     a.setFont(font)
     w = MainWindow()
     w.showMaximized()
