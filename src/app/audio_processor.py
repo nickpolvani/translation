@@ -35,6 +35,7 @@ class AudioProcessorThread(QThread):
 
         self.audio_frames = []
         self.sentence_queue = queue.Queue()
+        self.current_time = 0
 
     def _get_accumulated_audio_seconds(self) -> float:
         return len(self.audio_frames) * self.length_chunk_seconds
@@ -45,6 +46,10 @@ class AudioProcessorThread(QThread):
         translates it to text, and updates the spectrogram plot.
         """
         audio_data = self.audio_queue.get()  # This blocks until audio data is available
+        self.current_time += self.length_chunk_seconds
+        # discard the first 2 seconds of audio data
+        if self.current_time < 2:
+            return None
 
         # measure the time to process audio data
         audio_data = audio_data / 32768.0  # Convert to float [-1, 1]

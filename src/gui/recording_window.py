@@ -16,15 +16,15 @@ class RecordingWidget(QWidget):
 
         self.controller = Controller(self.language1, self.language2, parent=self)
 
-        self.text_panel1 = TextPanelTitle(
-            title=f"Transcription in {str(self.language1)}",
+        self.text_panel1 = ScrollableTextPanel(
+            title=f"Transcription in {str(self.language1)}:\n",
             parent=self,
             processing_started=self.controller.get_processing_started_signal(),
             processing_finished=self.controller.get_processing_finished_signal(),
         )
 
-        self.text_panel2 = TextPanelTitle(
-            title=f"Transcription in {str(self.language2)}",
+        self.text_panel2 = ScrollableTextPanel(
+            title=f"Transcription in {str(self.language2)}:\n",
             parent=self,
             processing_started=self.controller.get_processing_started_signal(),
             processing_finished=self.controller.get_processing_finished_signal(),
@@ -40,8 +40,6 @@ class RecordingWidget(QWidget):
         )
         self.controller.start()
 
-        self.text1 = ""
-        self.text2 = ""
         self.UI()
 
     def UI(self):
@@ -57,46 +55,13 @@ class RecordingWidget(QWidget):
         self.show()
 
     def update_texts_panel(self, texts: tuple):
-        self.text1 += texts[0] + "\n"
-        self.text2 += texts[1] + "\n"
-        self.text_panel1.set_text(self.text1)
-        self.text_panel2.set_text(self.text2)
+        text1 = self.text_panel1.get_text()
+        text2 = self.text_panel2.get_text()
+        text1 += texts[0] + "\n"
+        text2 += texts[1] + "\n"
+        self.text_panel1.on_translation_ready(text1)
+        self.text_panel2.on_translation_ready(text2)
 
     def destroy(self):
         self.hide()
         self.deleteLater()
-
-
-class TextPanelTitle(QWidget):
-    def __init__(
-        self,
-        title: str,
-        processing_started: pyqtSignal,
-        processing_finished: pyqtSignal,
-        font_size=12,
-        parent: QWidget = None,
-    ):
-        super().__init__(parent)
-        self.title_label = QLabel()
-        self.title_label.setText(title)
-
-        self.text_label = ScrollableTextPanel(
-            processing_started=processing_started,
-            processing_finished=processing_finished,
-            font_size=font_size,
-            parent=self,
-        )
-        self.UI()
-
-    def UI(self):
-        layout = QVBoxLayout()
-        layout.addWidget(self.title_label)
-        layout.addWidget(self.text_label)
-        self.setLayout(layout)
-        self.show()
-
-    def set_text(self, text: str):
-        self.text_label.set_text(text)
-
-    def get_text(self) -> str:
-        return self.text_label.get_text()

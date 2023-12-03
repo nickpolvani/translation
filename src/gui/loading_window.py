@@ -9,6 +9,14 @@ class LoadingDialog(QWidget):  # Subclass QWidget instead of QLabel
         self.setWindowTitle("Loading...")
         self.setWindowFlags(self.windowFlags() & ~Qt.WindowCloseButtonHint)
 
+
+        self.text_label = QLabel(self)
+        self.text_label.setText("Loading...")
+        font = self.text_label.font()
+        font.setPointSize(36)
+        self.text_label.setFont(font)
+        self.text_label.setAlignment(Qt.AlignCenter)
+
         # Set up the label for the loading GIF
         self.label = QLabel(self)
         self.movie = QMovie("media/loading.gif")  # Ensure this path is correct
@@ -16,6 +24,7 @@ class LoadingDialog(QWidget):  # Subclass QWidget instead of QLabel
         self.label.setAlignment(Qt.AlignCenter)  # Center alignment for the label
 
         layout = QVBoxLayout()
+        layout.addWidget(self.text_label)
         layout.addWidget(self.label)
         self.setLayout(layout)
 
