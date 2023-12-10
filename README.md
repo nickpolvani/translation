@@ -10,6 +10,9 @@ This application provides real-time translation for conversations between two la
 - Voice Activity Detection to improve translation accuracy.
 - Displays a transcript of the conversation in both the original and translated languages.
 
+
+WARNING: The translation performance is susceptible to noise. 
+
 ## Example Images
 ### Language Select
 <img src="./media/language_select.jpg" width="600">
